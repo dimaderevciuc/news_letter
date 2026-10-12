@@ -1,16 +1,61 @@
+import argparse
+import datetime as dt
+
+from config import ARXIV_QUERY, TOP_FEED_ITEMS, TOP_NEWS, TOP_PAPERS
+from digest import build_digest
 from fetch_arxiv import fetch_arxiv
+from fetch_feeds import fetch_feeds
+from fetch_news import fetch_hacker_news
+from history import load_sent, mark_sent
+from rank import rank_feed_items, rank_news, rank_papers
+from send_email import send_email
+from summarize import summarize_papers
+
+
+def fetch(name, fn, errors):
+    """Run one fetcher; a failing source is reported in the digest instead of killing the run."""
+    try:
+        return fn()
+    except Exception as e:
+        errors.append(f"{name}: {e}")
+        return []
 
 
 if __name__ == "__main__":
 
-    query = "cat:cs.AI OR cat:cs.LG OR cat:cs.CL OR cat:cs.CV"
+    parser = argparse.ArgumentParser(description="Build and send the daily tech digest")
+    parser.add_argument("--send", action="store_true", help="email the digest instead of printing it")
+    args = parser.parse_args()
 
-    papers = fetch_arxiv(query)
-    print(f"Found {len(papers)} papers\n")
+    errors = []
+    papers = fetch("arXiv", lambda: fetch_arxiv(ARXIV_QUERY), errors)
+    stories = fetch("Hacker News", fetch_hacker_news, errors)
+    feed_items, feed_errors = fetch("feeds", fetch_feeds, errors) or ([], [])
+    errors += feed_errors
+    print(f"Fetched {len(papers)} papers, {len(stories)} stories, {len(feed_items)} feed items")
 
-    for paper in papers:
-        print(f"Title: {paper.title}")
-        print(f"Authors: {', '.join([author.name for author in paper.authors])}")
-        print(f"Published: {paper.published}")
-        print(f"Abstract:  {paper.summary.strip()[:200]}...")
-        print(f"URL: {paper.entry_id}\n")
+    # Drop anything already emailed in a previous digest
+    sent = load_sent()
+    papers = [p for p in papers if p.entry_id not in sent]
+    stories = [s for s in stories if s["url"] not in sent]
+    feed_items = [f for f in feed_items if f["url"] not in sent]
+
+    news = rank_news(stories, TOP_NEWS)
+    picked_feed = rank_feed_items(feed_items, TOP_FEED_ITEMS)
+    picked_papers = rank_papers(papers, TOP_PAPERS)
+    summaries = summarize_papers(picked_papers)
+
+    body = build_digest(news, picked_feed, picked_papers, summaries, errors)
+
+    if args.send:
+        if not (news or picked_feed or picked_papers):
+            raise SystemExit("Nothing to send today: " + "; ".join(errors))
+        send_email(f"Daily Tech Digest - {dt.date.today():%b %d}", body)
+        mark_sent(
+            [s["url"] for _, s in news]
+            + [f["url"] for _, f in picked_feed]
+            + [p.entry_id for _, p in picked_papers]
+        )
+        print("Sent.")
+    else:
+        print(body)

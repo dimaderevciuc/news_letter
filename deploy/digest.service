@@ -1,0 +1,9 @@
+[Unit]
+Description=Send the daily tech digest
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Desktop/Personal Projects/news_letter
+ExecStart="%h/Desktop/Personal Projects/news_letter/.venv/bin/python" main.py --send

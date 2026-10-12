@@ -1,23 +1,28 @@
 import datetime as dt
-from re import search
+
 import arxiv
 
-lookback_hours = 48
+from config import ARXIV_MAX_RESULTS, LOOKBACK_HOURS
+
 
 def fetch_arxiv(query: str):
     search = arxiv.Search(
         query = query,
-        max_results = 15,
+        max_results = ARXIV_MAX_RESULTS,
         sort_by = arxiv.SortCriterion.SubmittedDate
     )
 
-    cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=lookback_hours)
+    # arXiv announces in daily batches (none on weekends), so the window is anchored
+    # to the newest paper instead of "now". history.py stops batches repeating.
+    cutoff = None
 
     results = []
 
-    for paper in arxiv.Client().results(search):
+    for paper in arxiv.Client(page_size=200).results(search):
+        if cutoff is None:
+            cutoff = paper.published - dt.timedelta(hours=LOOKBACK_HOURS)
         if paper.published < cutoff:
-            continue
-    results.append(paper)
+            break  # results are sorted newest-first, so everything after is older
+        results.append(paper)
 
     return results

@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the daily tech digest every morning
+
+[Timer]
+OnCalendar=*-*-* 07:30:00
+# If the laptop was off or asleep at 07:30, run as soon as it's back
+Persistent=true
+RandomizedDelaySec=2min
+
+[Install]
+WantedBy=timers.target
