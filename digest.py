@@ -17,6 +17,8 @@ def _title(i: int, title: str):
 def _short(text: str, max_chars: int = 320):
     """First couple of sentences, cut at a sentence boundary when possible."""
     text = " ".join(text.split())
+    if not text:
+        return ""
     sentences = re.split(r"(?<=[.!?])\s+", text)
     out = ""
     for s in sentences:
@@ -30,7 +32,7 @@ def _section(name: str, count: int):
     return [RULE, f"{name} ({count})", RULE, ""]
 
 
-def build_digest(news, feed_items, papers, summaries=None, errors=None):
+def build_digest(news, feed_items, papers, summaries=None, intro=None, errors=None):
     summaries = summaries or {}
     today = dt.date.today().strftime("%A, %B %d, %Y")
     lines = [
@@ -38,6 +40,8 @@ def build_digest(news, feed_items, papers, summaries=None, errors=None):
         "AI / ML, quantum computing and programming, the last 24 hours.",
         "",
     ]
+    if intro:
+        lines += [_wrap(intro, indent=""), ""]
 
     if news:
         lines += _section("TOP NEWS", len(news))
@@ -54,9 +58,10 @@ def build_digest(news, feed_items, papers, summaries=None, errors=None):
         for i, (topic, item) in enumerate(feed_items, 1):
             lines.append(_title(i, item["title"]))
             lines.append(f"   [{topic}] {item['source']}")
-            if item["summary"]:
+            summary = summaries.get(item["url"]) or _short(item["summary"], 240)
+            if summary:
                 lines.append("")
-                lines.append(_wrap(_short(item["summary"], 240)))
+                lines.append(_wrap(summary))
             lines.append("")
             lines.append(f"   {item['url']}")
             lines.append("")

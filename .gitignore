@@ -2,4 +2,4 @@ __pycache__/
 *.pyc
 .venv/
 .env
-sent_history.json
+digest.html

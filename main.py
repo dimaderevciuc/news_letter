@@ -1,15 +1,17 @@
 import argparse
 import datetime as dt
+from pathlib import Path
 
 from config import ARXIV_QUERY, TOP_FEED_ITEMS, TOP_NEWS, TOP_PAPERS
 from digest import build_digest
+from digest_html import build_html
 from fetch_arxiv import fetch_arxiv
 from fetch_feeds import fetch_feeds
 from fetch_news import fetch_hacker_news
 from history import load_sent, mark_sent
 from rank import rank_feed_items, rank_news, rank_papers
 from send_email import send_email
-from summarize import summarize_papers
+from summarize import enrich
 
 
 def fetch(name, fn, errors):
@@ -25,6 +27,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Build and send the daily tech digest")
     parser.add_argument("--send", action="store_true", help="email the digest instead of printing it")
+    parser.add_argument("--html", metavar="FILE", help="also write the HTML email to FILE to preview it in a browser")
     args = parser.parse_args()
 
     errors = []
@@ -43,14 +46,19 @@ if __name__ == "__main__":
     news = rank_news(stories, TOP_NEWS)
     picked_feed = rank_feed_items(feed_items, TOP_FEED_ITEMS)
     picked_papers = rank_papers(papers, TOP_PAPERS)
-    summaries = summarize_papers(picked_papers)
+    summaries, intro = enrich(news, picked_feed, picked_papers)
 
-    body = build_digest(news, picked_feed, picked_papers, summaries, errors)
+    body = build_digest(news, picked_feed, picked_papers, summaries, intro, errors)
+    minutes = max(1, round(len(body.split()) / 230))
+    html = build_html(news, picked_feed, picked_papers, summaries, intro, errors, minutes)
+    if args.html:
+        Path(args.html).write_text(html)
+        print(f"HTML preview written to {args.html}")
 
     if args.send:
         if not (news or picked_feed or picked_papers):
             raise SystemExit("Nothing to send today: " + "; ".join(errors))
-        send_email(f"Daily Tech Digest - {dt.date.today():%b %d}", body)
+        send_email(f"The Daily Digest - {dt.date.today():%b %-d}", body, html)
         mark_sent(
             [s["url"] for _, s in news]
             + [f["url"] for _, f in picked_feed]

@@ -16,8 +16,9 @@ def load_env(path: str = ".env"):
             os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
-def send_email(subject: str, body: str):
+def send_email(subject: str, body: str, html: str | None = None):
     load_env()
+    # Real env vars win over .env (setdefault), so GitHub Actions secrets just work
     missing = [k for k in ("SMTP_USER", "SMTP_PASSWORD", "EMAIL_TO") if not os.environ.get(k)]
     if missing:
         raise SystemExit(f"Missing in .env: {', '.join(missing)} (see .env.example)")
@@ -27,6 +28,8 @@ def send_email(subject: str, body: str):
     msg["From"] = os.environ.get("EMAIL_FROM", os.environ["SMTP_USER"])
     msg["To"] = os.environ["EMAIL_TO"]
     msg.set_content(body)  # text/plain, utf-8
+    if html:
+        msg.add_alternative(html, subtype="html")  # clients that can show HTML pick this part
 
     host = os.environ.get("SMTP_HOST", "smtp.gmail.com")
     port = int(os.environ.get("SMTP_PORT", "587"))

@@ -1,3 +1,5 @@
+import os
+
 LOOKBACK_HOURS = 24
 TOP_PAPERS = 10
 TOP_NEWS = 10
@@ -45,9 +47,10 @@ FEEDS = {
 }
 TOP_FEED_ITEMS = 8
 
-# Optional: summarize the picked papers with a local Ollama model. Skipped if Ollama isn't running.
-OLLAMA_URL = "http://localhost:11434"
-OLLAMA_MODEL = "qwen2.5:3b"
+# Optional: a local Ollama model writes the summaries and the intro. Skipped if Ollama isn't running.
+# Both can be overridden with environment variables (the GitHub Actions workflow does this).
+OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:3b")
 
 # Items already emailed are remembered here so they don't show up twice
 HISTORY_FILE = "sent_history.json"
