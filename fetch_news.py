@@ -4,6 +4,7 @@ import urllib.parse
 import urllib.request
 
 from config import HN_MIN_POINTS, LOOKBACK_HOURS
+from fetch_article import html_to_text
 
 HN_SEARCH_URL = "https://hn.algolia.com/api/v1/search"
 
@@ -26,6 +27,7 @@ def fetch_hacker_news():
             "discussion": f"https://news.ycombinator.com/item?id={h['objectID']}",
             "points": h.get("points", 0),
             "comments": h.get("num_comments", 0),
+            "text": html_to_text(h.get("story_text") or ""),
         }
         for h in hits
     ]

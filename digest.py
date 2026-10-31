@@ -48,6 +48,11 @@ def build_digest(news, feed_items, papers, summaries=None, intro=None, errors=No
         for i, (topic, s) in enumerate(news, 1):
             lines.append(_title(i, s["title"]))
             lines.append(f"   [{topic}] {s['points']} points, {s['comments']} comments")
+            summary = summaries.get(s["url"]) or _short(s.get("excerpt", ""), 240)
+            if summary:
+                lines.append("")
+                lines.append(_wrap(summary))
+                lines.append("")
             lines.append(f"   {s['url']}")
             if s["url"] != s["discussion"]:
                 lines.append(f"   Discussion: {s['discussion']}")

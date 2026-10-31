@@ -6,6 +6,7 @@ from config import ARXIV_QUERY, TOP_FEED_ITEMS, TOP_NEWS, TOP_PAPERS
 from digest import build_digest
 from digest_html import build_html
 from fetch_arxiv import fetch_arxiv
+from fetch_article import add_article_text
 from fetch_feeds import fetch_feeds
 from fetch_news import fetch_hacker_news
 from history import load_sent, mark_sent
@@ -44,6 +45,7 @@ if __name__ == "__main__":
     feed_items = [f for f in feed_items if f["url"] not in sent]
 
     news = rank_news(stories, TOP_NEWS)
+    add_article_text([s for _, s in news])
     picked_feed = rank_feed_items(feed_items, TOP_FEED_ITEMS)
     picked_papers = rank_papers(papers, TOP_PAPERS)
     summaries, intro = enrich(news, picked_feed, picked_papers)

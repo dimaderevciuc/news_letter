@@ -17,6 +17,14 @@ software engineer what happened. Only use facts from the excerpt. Plain words, n
 Title: {title}
 Excerpt: {text}"""
 
+NEWS_PROMPT = """Summarize this article in 1-2 short sentences (under 45 words total) that tell a
+software engineer what it is about. Only use facts from the text. Plain words, no hype, no preamble.
+The text was scraped from a web page: ignore menus, cookie banners and subscription prompts, and never
+comment on the text itself.
+
+Title: {title}
+Text: {text}"""
+
 INTRO_PROMPT = """You write the opening of a friendly daily tech newsletter for one reader.
 Here are today's headlines:
 
@@ -42,6 +50,13 @@ def _first_sentences(text: str, n: int):
     return " ".join(sentences[:n])
 
 
+def _drop_meta_comments(text: str):
+    """Remove sentences where the model talks about its input ("No information ... in the given text")."""
+    sentences = re.split(r"(?<=[.!?])\s+(?=[A-Z])", text)
+    kept = [x for x in sentences if not re.search(r"\b(?:given|provided) (?:text|excerpt|article)\b|\bin the (?:text|excerpt)\b", x, re.I)]
+    return " ".join(kept) or text
+
+
 def generate(prompt: str, max_sentences: int, max_tokens: int = 150):
     payload = {
         "model": OLLAMA_MODEL,
@@ -58,7 +73,7 @@ def generate(prompt: str, max_sentences: int, max_tokens: int = 150):
     with urllib.request.urlopen(req, timeout=300) as r:
         text = json.load(r)["response"].strip()
     text = re.sub(r'^["\']|["\']$', "", " ".join(text.split()))
-    return _first_sentences(text, max_sentences)
+    return _first_sentences(_drop_meta_comments(text), max_sentences)
 
 
 def enrich(news, feed_items, papers):
@@ -68,7 +83,8 @@ def enrich(news, feed_items, papers):
         return {}, None
 
     summaries = {}
-    jobs = [(p.entry_id, PAPER_PROMPT, p.title, p.summary) for _, p in papers]
+    jobs = [(s["url"], NEWS_PROMPT, s["title"], s["text"]) for _, s in news if s.get("text")]
+    jobs += [(p.entry_id, PAPER_PROMPT, p.title, p.summary) for _, p in papers]
     jobs += [(f["url"], ARTICLE_PROMPT, f["title"], f["summary"]) for _, f in feed_items if f["summary"]]
 
     for i, (key, prompt, title, text) in enumerate(jobs, 1):

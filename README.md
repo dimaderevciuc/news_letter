@@ -8,7 +8,7 @@ plain-text version for clients that don't show HTML).
 It runs on GitHub Actions, so your laptop doesn't need to be on.
 
 **Sources**
-- Hacker News: top stories, boosted when they match your topics
+- Hacker News: top stories, boosted when they match your topics (the linked articles are read so they can be summarized)
 - RSS feeds: quantum, AI and programming blogs/news (`FEEDS` in `config.py`)
 - arXiv: newest papers in cs.AI, cs.LG, cs.CL, cs.CV, cs.SE, cs.PL, quant-ph
 
@@ -43,7 +43,7 @@ Everything lives in `config.py`:
 
 If [Ollama](https://ollama.com) is running with the model from `OLLAMA_MODEL`, it
 writes a short opening paragraph for the email plus 1-2 sentence summaries of the
-papers and feed articles. Without Ollama the digest still works and uses the
+top stories, feed articles and papers. Without Ollama the digest still works and uses the
 abstracts / feed excerpts instead.
 
 ```bash

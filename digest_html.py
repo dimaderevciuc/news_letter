@@ -95,9 +95,10 @@ def build_html(news, feed_items, papers, summaries=None, intro=None, errors=None
             links = [("Read", s["url"])]
             if s["url"] != s["discussion"]:
                 links.append(("Discussion", s["discussion"]))
+            summary = summaries.get(s["url"]) or _short(s.get("excerpt", ""), 240)
             rows.append(_item(
                 topic, f"{s['points']} points · {s['comments']} comments", s["title"], s["url"],
-                links=links if i < 3 else (), lead=i < 3, first=i == 0,
+                summary, links, lead=i < 3, first=i == 0,
             ))
         sections.append(_section("Top stories", "What the tech world is talking about today", rows))
 
