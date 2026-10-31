@@ -2,9 +2,10 @@ name: Daily digest
 
 on:
   schedule:
-    # Cron is in UTC. 05:30 UTC = 07:30 in UTC+2 (08:30 in summer time).
-    # GitHub may start scheduled runs a few minutes late when it's busy.
-    - cron: "30 5 * * *"
+    # GitHub starts scheduled runs late when it's busy (we've seen ~6 hours), so the run is
+    # triggered early in the night (UTC) and the job waits until SEND_AT before building the digest.
+    # An odd minute is used because the top of the hour is GitHub's busiest time.
+    - cron: "47 1 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -20,15 +21,32 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  # When the email should arrive, in your timezone (summer time is handled automatically)
+  SEND_AT: "08:30"
+  SEND_TZ: Europe/Vienna
   OLLAMA_MODEL: qwen2.5:3b
   OLLAMA_MODELS: /home/runner/ollama-models
 
 jobs:
   digest:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # Most of this is the wait below; GitHub's maximum is 360
+    timeout-minutes: 360
 
     steps:
+      - name: Wait until send time
+        if: github.event_name == 'schedule'
+        run: |
+          send=$(TZ="$SEND_TZ" date -d "today $SEND_AT" +%s)
+          # Start ~10 minutes early: installing Ollama and building the digest takes a few minutes
+          wait=$(( send - 600 - $(date +%s) ))
+          if [ "$wait" -gt 0 ]; then
+            echo "Waiting $(( wait / 60 )) minutes, until 10 minutes before $SEND_AT $SEND_TZ"
+            sleep "$wait"
+          else
+            echo "Started after the send time, sending right away"
+          fi
+
       - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v7

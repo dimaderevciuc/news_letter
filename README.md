@@ -53,7 +53,7 @@ ollama pull qwen2.5:3b
 
 ## Send it every morning: GitHub Actions (recommended)
 
-`.github/workflows/digest.yml` runs every day at 05:30 UTC on GitHub's servers:
+`.github/workflows/digest.yml` runs every day on GitHub's servers and emails you at 08:30 Vienna time:
 installs Ollama (the model is cached between runs), builds the digest, emails it,
 and commits `sent_history.json` back to the repo so nothing repeats.
 
@@ -63,7 +63,7 @@ Actions → New repository secret** and add `SMTP_USER`, `SMTP_PASSWORD` and
 
 - Test it: **Actions → Daily digest → Run workflow** (tick *dry run* to only build
   it; the HTML is attached to the run under *Artifacts*).
-- Change the time: edit the `cron:` line (it's in UTC).
+- Change the time: edit `SEND_AT` / `SEND_TZ` at the top of the workflow. GitHub starts scheduled runs hours late, so the run is triggered at night and waits until then.
 - The workflow commits to the repo daily, so run `git pull` before working locally.
 
 ## Alternative: run it on this laptop
