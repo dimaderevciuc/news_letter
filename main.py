@@ -3,6 +3,7 @@ import datetime as dt
 from pathlib import Path
 
 from config import ARXIV_QUERY, TOP_FEED_ITEMS, TOP_NEWS, TOP_PAPERS
+from dedupe import drop_duplicates
 from digest import build_digest
 from digest_html import build_html
 from fetch_arxiv import fetch_arxiv
@@ -44,9 +45,12 @@ if __name__ == "__main__":
     stories = [s for s in stories if s["url"] not in sent]
     feed_items = [f for f in feed_items if f["url"] not in sent]
 
-    news = rank_news(stories, TOP_NEWS)
+    # Rank twice as many as needed: some get dropped as duplicates once their text is known
+    news = rank_news(stories, TOP_NEWS * 2)
     add_article_text([s for _, s in news])
-    picked_feed = rank_feed_items(feed_items, TOP_FEED_ITEMS)
+    picked_feed = rank_feed_items(feed_items, TOP_FEED_ITEMS * 2)
+    news, picked_feed, duplicates = drop_duplicates(news, picked_feed)
+    news, picked_feed = news[:TOP_NEWS], picked_feed[:TOP_FEED_ITEMS]
     picked_papers = rank_papers(papers, TOP_PAPERS)
     summaries, intro = enrich(news, picked_feed, picked_papers)
 
@@ -65,6 +69,7 @@ if __name__ == "__main__":
             [s["url"] for _, s in news]
             + [f["url"] for _, f in picked_feed]
             + [p.entry_id for _, p in picked_papers]
+            + duplicates  # so the twin doesn't show up tomorrow instead
         )
         print("Sent.")
     else:
